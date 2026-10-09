@@ -169,6 +169,12 @@ ParcelPlus OpenTelemetry Collector, not by Terraform.
 The `demo` environment is intentionally used by the deployment workflow so
 that an approval rule can be enabled before any dashboard is changed.
 
+The token must have both `ReadConfig` and `WriteConfig`. The workflow performs
+a read-only dashboard API preflight before Terraform runs. A successful
+preflight proves the URL and token are usable for reads; an `apply` failure
+after a successful preflight usually means `WriteConfig` is missing or the
+dashboard payload was rejected by the tenant.
+
 ## Onboard ParcelPlus
 
 ParcelPlus is already onboarded through:

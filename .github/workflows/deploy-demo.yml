@@ -39,6 +39,22 @@ jobs:
         run: |
           terraform -chdir=generated init -backend=false
           terraform -chdir=generated validate
+      - name: Verify Dynatrace environment access
+        env:
+          DYNATRACE_ENV_URL: ${{ secrets.DYNATRACE_ENV_URL }}
+          DYNATRACE_API_TOKEN: ${{ secrets.DYNATRACE_API_TOKEN }}
+        run: |
+          test -n "$DYNATRACE_ENV_URL" || { echo "DYNATRACE_ENV_URL is not configured in the demo environment"; exit 1; }
+          test -n "$DYNATRACE_API_TOKEN" || { echo "DYNATRACE_API_TOKEN is not configured in the demo environment"; exit 1; }
+          status=$(curl --silent --show-error --output /tmp/dynatrace-response.txt --write-out "%{http_code}" \
+            --header "Authorization: Api-Token $DYNATRACE_API_TOKEN" \
+            "${DYNATRACE_ENV_URL%/}/api/config/v1/dashboards")
+          if [ "$status" != "200" ]; then
+            echo "Dynatrace dashboard API preflight failed with HTTP $status"
+            sed -n '1,20p' /tmp/dynatrace-response.txt
+            exit 1
+          fi
+          echo "Dynatrace dashboard API is reachable with ReadConfig access"
       - name: Terraform init
         env:
           DYNATRACE_ENV_URL: ${{ secrets.DYNATRACE_ENV_URL }}
