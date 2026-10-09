@@ -29,7 +29,9 @@ def _classic_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
             "filterConfig": {
                 "type": "MIXED",
                 "customName": tile["title"],
+                "defaultName": "Custom chart",
                 "chartConfig": {
+                    "legendShown": True,
                     "type": "LINE",
                     "series": [
                         {
@@ -37,9 +39,15 @@ def _classic_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
                             "aggregation": "SUM",
                             "aggregationRate": "TOTAL",
                             "type": "LINE",
+                            "entityType": "SERVICE",
+                            "dimensions": [],
+                            "sortAscending": False,
+                            "sortColumn": True,
                         }
                     ],
+                    "resultMetadata": {},
                 },
+                "filtersPerEntityType": {},
             },
         })
     return {
