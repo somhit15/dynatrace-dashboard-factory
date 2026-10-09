@@ -11,14 +11,14 @@ def _resource_name(value: str) -> str:
 
 
 def _dql_metric_query(metric: str, services: list[str]) -> str:
-    """Build a DQL timeseries query for a metric with optional service filter."""
-    if services:
-        service_filter = "|".join(services)
-        return (
-            f'timeseries sum(`{metric}`), '
-            f'filter: dt.entity.service matchesPhrase "{service_filter}"'
-        )
-    return f"timeseries sum(`{metric}`)"
+    """Build a valid DQL timeseries query for a metric.
+
+    The DQL `timeseries` command does not support inline `filter:` with
+    matchesPhrase on entity names. Service-level filtering in Grail requires
+    entity IDs resolved at query time, not service name strings.
+    We emit a clean sum query; the tile title communicates the metric scope.
+    """
+    return f"timeseries val = sum(`{metric}`), interval: auto"
 
 
 def _new_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
