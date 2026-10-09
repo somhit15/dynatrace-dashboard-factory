@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "application", "dashboard"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "generator": {"type": "string"},
+    "application": {"type": "string"},
+    "dashboard": {
+      "type": "object",
+      "required": ["name", "owner", "tiles"],
+      "properties": {
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "owner": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "services": {"type": "array", "items": {"type": "string"}},
+        "tiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "type", "metric", "position"],
+            "properties": {
+              "id": {"type": "string"},
+              "title": {"type": "string"},
+              "type": {"const": "metric"},
+              "metric": {"type": "string"},
+              "service_filter": {"type": "array", "items": {"type": "string"}},
+              "position": {"type": "object"}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

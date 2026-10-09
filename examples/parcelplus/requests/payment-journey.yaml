@@ -1,0 +1,13 @@
+name: parcelplus-payment-journey
+description: Payment performance, conversion and failure impact for ParcelPlus.
+audience: operations
+services:
+  - payment-service
+  - order-service
+metrics:
+  - parcelplus.payments.authorized
+  - parcelplus.payments.failed
+  - parcelplus.payment.latency_ms
+tags:
+  - application:parcelplus
+  - domain:payments

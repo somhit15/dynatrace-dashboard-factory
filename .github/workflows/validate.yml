@@ -1,0 +1,31 @@
+name: Validate dashboard requests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install framework
+        run: pip install -e .
+      - name: Validate ParcelPlus onboarding package
+        run: dashboard-factory validate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml
+      - name: Generate dashboard specification
+        run: dashboard-factory generate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml --output generated/payment-journey.yaml
+      - name: Render Terraform
+        run: dashboard-factory render --spec generated/payment-journey.yaml --output generated/payment-journey.tf
+      - uses: hashicorp/setup-terraform@v3
+      - name: Terraform format check
+        run: terraform fmt -check generated
+      - name: Terraform validate
+        run: |
+          cp terraform/provider.tf.example generated/provider.tf
+          terraform -chdir=generated init -backend=false
+          terraform -chdir=generated validate

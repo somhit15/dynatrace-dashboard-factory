@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["name"],
+  "properties": {
+    "name": {"type": "string", "minLength": 3},
+    "description": {"type": "string"},
+    "audience": {"enum": ["business", "operations", "engineering", "executive"]},
+    "services": {"type": "array", "items": {"type": "string"}},
+    "metrics": {"type": "array", "items": {"type": "string"}},
+    "tags": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

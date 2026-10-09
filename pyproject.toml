@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dynatrace-dashboard-factory"
+version = "0.1.0"
+description = "Reusable AI-assisted, GitOps-driven Dynatrace dashboard generation framework"
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=6.0", "jsonschema>=4.23"]
+
+[project.scripts]
+dashboard-factory = "dashboard_factory.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

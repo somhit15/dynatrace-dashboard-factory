@@ -1,0 +1,49 @@
+application:
+  name: parcelplus
+  owner: delivery-platform
+  environment: demo
+
+services:
+  - name: api-gateway
+    technology: fastapi
+  - name: order-service
+    technology: fastapi
+  - name: customer-service
+    technology: fastapi
+  - name: payment-service
+    technology: fastapi
+  - name: dispatch-service
+    technology: fastapi
+  - name: tracking-service
+    technology: fastapi
+  - name: notification-service
+    technology: fastapi
+  - name: analytics-service
+    technology: fastapi
+
+metrics:
+  - name: parcelplus.orders.created
+    type: counter
+    description: Orders accepted by Order Service
+  - name: parcelplus.orders.delivered
+    type: counter
+    description: Orders reaching delivery completion
+  - name: parcelplus.payments.authorized
+    type: counter
+    description: Successful payment authorizations
+  - name: parcelplus.payments.failed
+    type: counter
+    description: Failed payment authorizations
+  - name: parcelplus.payment.latency_ms
+    type: histogram
+    description: Payment processing duration
+  - name: parcelplus.dispatch.delayed
+    type: counter
+    description: Orders delayed because dispatch capacity was unavailable
+
+slos:
+  - name: payment-success
+    target: 99
+  - name: payment-latency
+    target: 95
+    threshold_seconds: 3
