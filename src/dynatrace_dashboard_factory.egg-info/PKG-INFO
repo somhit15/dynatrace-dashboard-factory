@@ -1,9 +1,0 @@
-Metadata-Version: 2.4
-Name: dynatrace-dashboard-factory
-Version: 0.1.0
-Summary: Reusable AI-assisted, GitOps-driven Dynatrace dashboard generation framework
-Requires-Python: >=3.9
-License-File: LICENSE
-Requires-Dist: PyYAML>=6.0
-Requires-Dist: jsonschema>=4.23
-Dynamic: license-file

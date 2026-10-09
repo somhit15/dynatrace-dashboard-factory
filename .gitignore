@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 .env
 *.py[cod]
+*.egg-info/
 generated/*.tf
 generated/*.json
 terraform/.terraform/
