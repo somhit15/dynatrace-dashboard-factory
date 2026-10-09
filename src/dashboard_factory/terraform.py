@@ -12,18 +12,36 @@ def _resource_name(value: str) -> str:
 
 def _classic_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
     dashboard = spec["dashboard"]
-    tiles: dict[str, Any] = {}
-    layouts: dict[str, Any] = {}
+    tiles: list[dict[str, Any]] = []
     for tile in dashboard["tiles"]:
-        tile_id = tile["id"]
-        tiles[tile_id] = {
+        position = tile["position"]
+        tiles.append({
             "name": tile["title"],
-            "tileType": "CUSTOM_CHART",
+            "tileType": "CUSTOM_CHARTING",
             "configured": True,
-            "customName": tile["title"],
-            "queries": [{"metric": tile["metric"]}],
-        }
-        layouts[tile_id] = tile["position"]
+            "bounds": {
+                "top": position["y"] * 100,
+                "left": position["x"] * 80,
+                "width": position["w"] * 80,
+                "height": position["h"] * 80,
+            },
+            "tileFilter": {},
+            "filterConfig": {
+                "type": "MIXED",
+                "customName": tile["title"],
+                "chartConfig": {
+                    "type": "LINE",
+                    "series": [
+                        {
+                            "metric": tile["metric"],
+                            "aggregation": "SUM",
+                            "aggregationRate": "TOTAL",
+                            "type": "LINE",
+                        }
+                    ],
+                },
+            },
+        })
     return {
         "dashboardMetadata": {
             "name": dashboard["name"],
@@ -32,14 +50,18 @@ def _classic_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
             "tags": dashboard.get("tags", []),
         },
         "tiles": tiles,
-        "layouts": layouts,
     }
 
 
 def render_terraform(spec: dict[str, Any], output_path: str | Path) -> None:
     dashboard = spec["dashboard"]
     resource = _resource_name(dashboard["name"])
-    payload = json.dumps(_classic_dashboard_payload(spec), indent=2)
+    payload_lines = json.dumps(_classic_dashboard_payload(spec), indent=2).splitlines()
+    payload = "\n".join(
+        [payload_lines[0]]
+        + [f"  {line}" for line in payload_lines[1:-1]]
+        + [f"  {payload_lines[-1]}"]
+    )
     content = (
         f'resource "dynatrace_json_dashboard" "{resource}" {{\n'
         f"  contents = jsonencode({payload})\n"

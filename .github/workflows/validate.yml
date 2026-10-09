@@ -22,10 +22,11 @@ jobs:
       - name: Render Terraform
         run: dashboard-factory render --spec generated/payment-journey.yaml --output generated/payment-journey.tf
       - uses: hashicorp/setup-terraform@v3
+      - name: Prepare Terraform configuration
+        run: cp terraform/provider.tf.example generated/provider.tf
       - name: Terraform format check
-        run: terraform fmt -check generated
+        run: terraform fmt -check -recursive generated
       - name: Terraform validate
         run: |
-          cp terraform/provider.tf.example generated/provider.tf
           terraform -chdir=generated init -backend=false
           terraform -chdir=generated validate

@@ -1,6 +1,7 @@
 name: Deploy dashboards to Dynatrace Demo
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -30,6 +31,12 @@ jobs:
           dashboard-factory render --spec generated/payment-journey.yaml --output generated/payment-journey.tf
           cp terraform/provider.tf.example generated/provider.tf
       - uses: hashicorp/setup-terraform@v3
+      - name: Terraform format check
+        run: terraform fmt -check -recursive generated
+      - name: Terraform validate
+        run: |
+          terraform -chdir=generated init -backend=false
+          terraform -chdir=generated validate
       - name: Terraform init
         env:
           DYNATRACE_ENV_URL: ${{ secrets.DYNATRACE_ENV_URL }}

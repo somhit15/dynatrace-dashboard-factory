@@ -118,6 +118,12 @@ This contract is what makes the framework reusable for applications other than P
 
 ## Terraform provider
 
+The framework targets the Dynatrace Terraform provider and currently uses its
+`dynatrace_json_dashboard` resource, which manages classic dashboard JSON.
+The renderer therefore emits the classic dashboard payload (`tiles` as an
+array). This is deliberate: the provider resource and the newer Dashboards
+document API use different JSON contracts.
+
 The framework targets the Dynatrace Terraform provider:
 
 ```hcl
@@ -141,6 +147,66 @@ DYNATRACE_API_TOKEN
 ```
 
 For the first dashboard MVP, use a token with the least permissions required by `dynatrace_json_dashboard`: `ReadConfig` and `WriteConfig`. Add SLO permissions only when SLO resources are enabled.
+
+## First Dynatrace setup
+
+Create a Dynatrace API token with:
+
+- `ReadConfig`
+- `WriteConfig`
+
+In GitHub, create or open the `demo` environment under **Settings → Environments**.
+Add these environment secrets to that environment:
+
+```text
+DYNATRACE_ENV_URL=https://<environment-id>.live.dynatrace.com
+DYNATRACE_API_TOKEN=<api-token>
+```
+
+Do not add `/api/v2/otlp` to `DYNATRACE_ENV_URL`; that endpoint is used by the
+ParcelPlus OpenTelemetry Collector, not by Terraform.
+
+The `demo` environment is intentionally used by the deployment workflow so
+that an approval rule can be enabled before any dashboard is changed.
+
+## Onboard ParcelPlus
+
+ParcelPlus is already onboarded through:
+
+```text
+examples/parcelplus/application.yaml
+examples/parcelplus/requests/payment-journey.yaml
+```
+
+The application manifest describes the services and business metrics that the
+factory is allowed to reference. The request selects the first dashboard to
+generate. A push to `main` runs validation, generates the specification,
+renders Terraform, and deploys the dashboard to the Demo environment.
+
+To onboard another application, copy `examples/parcelplus/` to a new folder,
+replace its service and metric contract, add one or more requests, and update
+the two workflow command paths. The framework code itself does not need to be
+changed.
+
+## GitHub Actions troubleshooting
+
+The validation workflow should pass before deployment is attempted. The most
+useful checks are:
+
+```bash
+dashboard-factory validate --application examples/parcelplus/application.yaml \
+  --request examples/parcelplus/requests/payment-journey.yaml
+dashboard-factory generate --application examples/parcelplus/application.yaml \
+  --request examples/parcelplus/requests/payment-journey.yaml \
+  --output generated/payment-journey.yaml
+dashboard-factory render --spec generated/payment-journey.yaml \
+  --output generated/payment-journey.tf
+```
+
+The deploy workflow can also be started manually with **Actions → Deploy
+dashboards to Dynatrace Demo → Run workflow**. If Terraform `plan` succeeds but
+`apply` fails, check the Dynatrace API token scopes and the generated dashboard
+payload first.
 
 ## GitHub Actions lifecycle
 
