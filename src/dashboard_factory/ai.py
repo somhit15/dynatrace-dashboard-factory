@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from typing import Any, Protocol
 
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+FALLBACK_MODELS = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-flash-latest"]
 
 
 class StructuredAIClient(Protocol):
@@ -41,56 +43,71 @@ class GeminiAIClient:
         self.model = model
 
     def generate_json(self, *, system_prompt: str, user_prompt: str) -> dict[str, Any]:
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
-            f"?key={self.api_key}"
-        )
+        models_to_try = [self.model] + [m for m in FALLBACK_MODELS if m != self.model]
+        last_error: Exception | None = None
 
-        payload = {
-            "system_instruction": {
-                "parts": [{"text": system_prompt}]
-            },
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": user_prompt}],
-                }
-            ],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "temperature": 0.2,
-            },
-        }
+        for current_model in models_to_try:
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/{current_model}:generateContent"
+                f"?key={self.api_key}"
+            )
 
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+            payload = {
+                "system_instruction": {
+                    "parts": [{"text": system_prompt}]
+                },
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [{"text": user_prompt}],
+                    }
+                ],
+                "generationConfig": {
+                    "response_mime_type": "application/json",
+                    "temperature": 0.2,
+                },
+            }
 
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as err:
-            body = err.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Gemini API error (HTTP {err.code}): {body}") from err
-        except urllib.error.URLError as err:
-            raise RuntimeError(f"Network error connecting to Gemini API: {err.reason}") from err
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
 
-        candidates = data.get("candidates", [])
-        if not candidates:
-            raise RuntimeError(f"No response candidates returned by Gemini: {data}")
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        if not parts:
-            raise RuntimeError("Gemini response contained no content parts")
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    raise RuntimeError(f"No response candidates returned by Gemini: {data}")
 
-        text = parts[0].get("text", "").strip()
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError as err:
-            raise RuntimeError(f"Gemini output was not valid JSON:\n{text}") from err
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if not parts:
+                    raise RuntimeError("Gemini response contained no content parts")
+
+                text = parts[0].get("text", "").strip()
+                try:
+                    self.model = current_model
+                    return json.loads(text)
+                except json.JSONDecodeError as err:
+                    raise RuntimeError(f"Gemini output was not valid JSON:\n{text}") from err
+
+            except urllib.error.HTTPError as err:
+                body = err.read().decode("utf-8", errors="replace")
+                last_error = RuntimeError(f"Gemini API error ({current_model}, HTTP {err.code}): {body}")
+                # If high demand (503) or not found (404), try next model in fallback list
+                if err.code in (503, 404):
+                    time.sleep(1)
+                    continue
+                raise last_error from err
+            except urllib.error.URLError as err:
+                raise RuntimeError(f"Network error connecting to Gemini API: {err.reason}") from err
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("Failed to generate content with Gemini models")
 
 
 class AIDashboardGenerator:
