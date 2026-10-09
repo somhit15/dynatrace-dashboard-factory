@@ -2,6 +2,17 @@ name: Deploy dashboards to Dynatrace Dev
 
 on:
   workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Natural language requirement prompt for Gemini AI (e.g. 'Show orders created vs delivered')"
+        required: false
+        type: string
+        default: ""
+      dashboard_name:
+        description: "Dashboard name (e.g. parcelplus-custom-ops)"
+        required: false
+        type: string
+        default: ""
   push:
     branches: [main]
     paths:
@@ -29,6 +40,26 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.AI_API_KEY }}
         run: |
           mkdir -p generated
+          # If a natural language prompt was provided via GitHub Actions workflow dispatch:
+          PROMPT="${{ inputs.prompt }}"
+          if [ -n "$PROMPT" ]; then
+            CUSTOM_NAME="${{ inputs.dashboard_name }}"
+            if [ -z "$CUSTOM_NAME" ]; then
+              CUSTOM_NAME="parcelplus-prompt-dashboard"
+            fi
+            echo "========================================="
+            echo "Generating dashboard from prompt via Google Gemini AI..."
+            echo "Prompt: $PROMPT"
+            echo "Name:   $CUSTOM_NAME"
+            echo "========================================="
+            dashboard-factory ai \
+              --application examples/parcelplus/application.yaml \
+              --prompt "$PROMPT" \
+              --name "$CUSTOM_NAME" \
+              --output "generated/$CUSTOM_NAME.yaml"
+            dashboard-factory render --spec "generated/$CUSTOM_NAME.yaml" --output "generated/$CUSTOM_NAME.tf"
+          fi
+
           for req in examples/parcelplus/requests/*.yaml; do
             [ -f "$req" ] || continue
             req_name=$(basename "$req" .yaml)
