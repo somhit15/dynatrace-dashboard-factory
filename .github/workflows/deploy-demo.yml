@@ -31,6 +31,8 @@ jobs:
           dashboard-factory render --spec generated/payment-journey.yaml --output generated/payment-journey.tf
           cp terraform/provider.tf.example generated/provider.tf
       - uses: hashicorp/setup-terraform@v3
+      - name: Format generated Terraform
+        run: terraform fmt -recursive generated
       - name: Terraform format check
         run: terraform fmt -check -recursive generated
       - name: Terraform validate
