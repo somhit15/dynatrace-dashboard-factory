@@ -9,4 +9,18 @@ terraform {
   }
 }
 
+# The dynatrace_document resource (used for Grail/newer SaaS environments)
+# requires OAuth2 client credentials in addition to the standard API token.
+#
+# Set these environment variables in GitHub Actions (dev environment secrets):
+#
+#   DYNATRACE_ENV_URL             = https://mbs54141.live.dynatrace.com
+#   DYNATRACE_API_TOKEN           = dt0c01.xxx   (ReadConfig + WriteConfig + document:read + document:write)
+#   DYNATRACE_AUTOMATION_CLIENT_ID     = dt0s02.xxx  (OAuth2 client ID)
+#   DYNATRACE_AUTOMATION_CLIENT_SECRET = dt0s02.xxx  (OAuth2 client secret)
+#
+# Create the OAuth2 client in:
+#   Dynatrace → Account Management → OAuth clients → Create client
+#   Grant scopes: document:documents:read, document:documents:write, document:documents:delete
+#
 provider "dynatrace" {}

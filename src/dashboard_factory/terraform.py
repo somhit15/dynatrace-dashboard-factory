@@ -10,71 +10,84 @@ def _resource_name(value: str) -> str:
     return re.sub(r"[^a-z0-9_]", "_", value.lower()).strip("_") or "dashboard"
 
 
-def _classic_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
+def _dql_metric_query(metric: str, services: list[str]) -> str:
+    """Build a DQL timeseries query for a metric with optional service filter."""
+    if services:
+        service_filter = "|".join(services)
+        return (
+            f'timeseries sum(`{metric}`), '
+            f'filter: dt.entity.service matchesPhrase "{service_filter}"'
+        )
+    return f"timeseries sum(`{metric}`)"
+
+
+def _new_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
+    """
+    Build a Dynatrace platform dashboard document (version 21, DQL-based).
+    This format is required for Grail/newer Dynatrace SaaS environments.
+    Used by the dynatrace_document Terraform resource.
+    """
     dashboard = spec["dashboard"]
-    tiles: list[dict[str, Any]] = []
+    tiles: dict[str, Any] = {}
+    layouts: dict[str, Any] = {}
+
     for tile in dashboard["tiles"]:
-        position = tile["position"]
-        tiles.append({
-            "name": tile["title"],
-            "tileType": "CUSTOM_CHARTING",
-            "configured": True,
-            "bounds": {
-                "top": position["y"] * 100,
-                "left": position["x"] * 80,
-                "width": position["w"] * 80,
-                "height": position["h"] * 80,
+        tile_id = str(tile["id"].split("_")[-1])  # e.g. "metric_1" → "1"
+        pos = tile["position"]
+        services = tile.get("service_filter", [])
+
+        tiles[tile_id] = {
+            "type": "data",
+            "title": tile["title"],
+            "query": _dql_metric_query(tile["metric"], services),
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "lineChart": {
+                    "legend": {"position": "bottom", "toggleValuesAction": "filter"},
+                    "yAxis": {"label": tile["title"]},
+                }
             },
-            "tileFilter": {},
-            "filterConfig": {
-                "type": "MIXED",
-                "customName": tile["title"],
-                "defaultName": "Custom chart",
-                "chartConfig": {
-                    "legendShown": True,
-                    "type": "LINE",
-                    "series": [
-                        {
-                            "metric": tile["metric"],
-                            "aggregation": "SUM",
-                            "aggregationRate": "TOTAL",
-                            "type": "LINE",
-                            "entityType": "SERVICE",
-                            "dimensions": [],
-                            "sortAscending": False,
-                            "sortColumn": True,
-                        }
-                    ],
-                    "resultMetadata": {},
-                },
-                "filtersPerEntityType": {},
+            "queryConfig": {
+                "enableHighPrecision": False,
+                "timeframe": "",
+                "withoutDefaultFiltering": False,
             },
-        })
+        }
+
+        layouts[tile_id] = {
+            "x": pos["x"],
+            "y": pos["y"],
+            "w": pos["w"] * 2,   # grid units: spec uses 4-col, DT uses 8-col wide units
+            "h": pos["h"],
+        }
+
     return {
-        "dashboardMetadata": {
-            "name": dashboard["name"],
-            "shared": True,
-            "owner": dashboard["owner"],
-            "tags": dashboard.get("tags", []),
-        },
+        "version": 21,
+        "variables": [],
         "tiles": tiles,
+        "layouts": layouts,
     }
 
 
 def render_terraform(spec: dict[str, Any], output_path: str | Path) -> None:
+    """
+    Renders a dynatrace_document Terraform resource for Grail/newer Dynatrace
+    SaaS environments (replaces the legacy dynatrace_json_dashboard resource
+    which only works with classic Config API v1 environments).
+    """
     dashboard = spec["dashboard"]
     resource = _resource_name(dashboard["name"])
-    payload_lines = json.dumps(_classic_dashboard_payload(spec), indent=2).splitlines()
-    payload = "\n".join(
-        [payload_lines[0]]
-        + [f"  {line}" for line in payload_lines[1:-1]]
-        + [f"  {payload_lines[-1]}"]
-    )
+    payload = json.dumps(_new_dashboard_payload(spec), indent=2)
+
     content = (
-        f'resource "dynatrace_json_dashboard" "{resource}" {{\n'
-        f"  contents = jsonencode({payload})\n"
+        f'resource "dynatrace_document" "{resource}" {{\n'
+        f'  type    = "dashboard"\n'
+        f'  name    = {json.dumps(dashboard["name"])}\n'
+        f'  private = false\n'
+        f'  content = jsonencode({payload})\n'
         "}\n"
     )
+
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
