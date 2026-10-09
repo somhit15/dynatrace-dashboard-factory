@@ -12,12 +12,34 @@ import json
 import os
 import time
 import urllib.error
+from pathlib import Path
 import urllib.request
 from typing import Any, Protocol
 
 
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
 FALLBACK_MODELS = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-flash-latest"]
+
+
+def _load_env_file() -> None:
+    """Find and load key-value pairs from .env into os.environ if present."""
+    search_dirs = [Path.cwd(), Path(__file__).resolve().parents[2]]
+    for directory in search_dirs:
+        env_file = directory / ".env"
+        if env_file.is_file():
+            try:
+                for line in env_file.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip("'\"")
+                    if key and key not in os.environ:
+                        os.environ[key] = val
+            except Exception:
+                pass
+            break
 
 
 class StructuredAIClient(Protocol):
@@ -29,6 +51,7 @@ class GeminiAIClient:
     """Google Gemini client using standard library HTTP for zero external dependencies."""
 
     def __init__(self, api_key: str | None = None, model: str = DEFAULT_GEMINI_MODEL):
+        _load_env_file()
         self.api_key = (
             api_key
             or os.getenv("GEMINI_API_KEY")
@@ -147,6 +170,38 @@ class AIDashboardGenerator:
         if dashboard_name:
             spec.setdefault("dashboard", {})["name"] = dashboard_name
         return spec
+
+    def generate_request_from_prompt(
+        self, application: dict[str, Any], natural_language_prompt: str, request_name: str | None = None
+    ) -> dict[str, Any]:
+        """Generate a valid dashboard request YAML from a natural language prompt."""
+        system_prompt = (
+            "You are an expert Observability & Dynatrace Architect.\n"
+            "Given an Application Manifest and a user's natural language request, create a valid Dashboard Request JSON.\n\n"
+            "RULES:\n"
+            "1. ONLY choose metric names that exist in the supplied Application Manifest under `metrics`.\n"
+            "2. ONLY choose service names that exist in the supplied Application Manifest under `services`.\n"
+            "3. Choose an audience from: 'business', 'operations', 'engineering', 'executive'.\n"
+            "4. Output JSON matching this schema:\n"
+            "{\n"
+            '  "name": "<kebab-case-name>",\n'
+            '  "description": "<detailed purpose>",\n'
+            '  "audience": "operations",\n'
+            '  "services": ["service1", "service2"],\n'
+            '  "metrics": ["metric1", "metric2"],\n'
+            '  "tags": ["application:<app>", "domain:<domain>"]\n'
+            "}\n"
+            "Return raw JSON only, no markdown, no explanation."
+        )
+        user_prompt = (
+            f"Application Manifest:\n{json.dumps(application, indent=2)}\n\n"
+            f"User Requirement:\n\"{natural_language_prompt}\"\n\n"
+            f"Requested Name (if any): {request_name or 'Derive a kebab-case name'}\n"
+        )
+        req = self.client.generate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+        if request_name:
+            req["name"] = request_name
+        return req
 
     @staticmethod
     def _build_system_prompt() -> str:

@@ -1,0 +1,16 @@
+name: parcelplus-operations-order-fulfillment
+description: Operations dashboard tracking order fulfillment lifecycle including orders
+  created, orders delivered, and dispatch delays.
+audience: operations
+services:
+- api-gateway
+- order-service
+- dispatch-service
+- tracking-service
+metrics:
+- parcelplus.orders.created
+- parcelplus.orders.delivered
+- parcelplus.dispatch.delayed
+tags:
+- application:parcelplus
+- domain:delivery-platform

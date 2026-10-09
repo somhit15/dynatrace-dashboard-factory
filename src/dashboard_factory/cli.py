@@ -31,7 +31,15 @@ def main() -> int:
     ai_cmd.add_argument("--prompt", required=True, help="Natural language dashboard requirement prompt")
     ai_cmd.add_argument("--output", required=True, help="Output path for dashboard-spec.yaml")
     ai_cmd.add_argument("--name", help="Optional override for dashboard name")
+    ai_cmd.add_argument("--save-request", help="Optional path to also save the generated dashboard request YAML")
     ai_cmd.add_argument("--api-key", help="Gemini API key (or set GEMINI_API_KEY/AI_API_KEY env var)")
+
+    ai_req = subparsers.add_parser("ai-request", help="Generate dashboard request YAML from natural language prompt")
+    ai_req.add_argument("--application", required=True, help="Path to application.yaml")
+    ai_req.add_argument("--prompt", required=True, help="Natural language dashboard requirement prompt")
+    ai_req.add_argument("--output", required=True, help="Output path for request YAML")
+    ai_req.add_argument("--name", help="Optional override for request name")
+    ai_req.add_argument("--api-key", help="Gemini API key (or set GEMINI_API_KEY/AI_API_KEY env var)")
 
     render = subparsers.add_parser("render", help="Render validated specification to Terraform")
     render.add_argument("--spec", required=True, help="Path to dashboard-spec.yaml or .json")
@@ -98,6 +106,26 @@ def main() -> int:
 
         write_yaml_or_json(args.output, spec)
         print(f"Successfully generated {args.output} from natural language prompt!")
+
+        if getattr(args, "save_request", None):
+            req = generator.generate_request_from_prompt(app_data, args.prompt, request_name=args.name or spec.get("dashboard", {}).get("name"))
+            write_yaml_or_json(args.save_request, req)
+            print(f"AI-generated dashboard request saved to {args.save_request}")
+        return 0
+
+    if args.command == "ai-request":
+        app_data = load_yaml(args.application)
+        try:
+            client = GeminiAIClient(api_key=args.api_key)
+            generator = AIDashboardGenerator(client)
+            print(f"Generating dashboard request with Google Gemini ({client.model})...")
+            req = generator.generate_request_from_prompt(app_data, args.prompt, request_name=args.name)
+        except Exception as e:
+            print(f"AI request generation failed: {e}", file=sys.stderr)
+            return 1
+
+        write_yaml_or_json(args.output, req)
+        print(f"Successfully created {args.output} from natural language prompt via Gemini AI!")
         return 0
 
     if args.command == "render":

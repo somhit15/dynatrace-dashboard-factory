@@ -28,15 +28,23 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.AI_API_KEY }}
         run: |
-          dashboard-factory validate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml
-          if [ -n "$GEMINI_API_KEY" ]; then
-            echo "Generating dashboard specification via Google Gemini AI..."
-            dashboard-factory generate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml --output generated/payment-journey.yaml --ai
-          else
-            echo "Generating dashboard specification via standard template generator..."
-            dashboard-factory generate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml --output generated/payment-journey.yaml
-          fi
-          dashboard-factory render --spec generated/payment-journey.yaml --output generated/payment-journey.tf
+          mkdir -p generated
+          for req in examples/parcelplus/requests/*.yaml; do
+            [ -f "$req" ] || continue
+            req_name=$(basename "$req" .yaml)
+            echo "========================================="
+            echo "Processing dashboard request: $req_name ($req)"
+            echo "========================================="
+            dashboard-factory validate --application examples/parcelplus/application.yaml --request "$req"
+            if [ -n "$GEMINI_API_KEY" ]; then
+              echo "Generating dashboard specification via Google Gemini AI..."
+              dashboard-factory generate --application examples/parcelplus/application.yaml --request "$req" --output "generated/$req_name.yaml" --ai
+            else
+              echo "Generating dashboard specification via standard template generator..."
+              dashboard-factory generate --application examples/parcelplus/application.yaml --request "$req" --output "generated/$req_name.yaml"
+            fi
+            dashboard-factory render --spec "generated/$req_name.yaml" --output "generated/$req_name.tf"
+          done
           cp terraform/provider.tf.example generated/provider.tf
       - uses: hashicorp/setup-terraform@v3
       - name: Format generated Terraform
