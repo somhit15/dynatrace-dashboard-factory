@@ -25,9 +25,17 @@ jobs:
       - name: Install framework
         run: pip install -e .
       - name: Generate Terraform
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.AI_API_KEY }}
         run: |
           dashboard-factory validate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml
-          dashboard-factory generate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml --output generated/payment-journey.yaml
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "Generating dashboard specification via Google Gemini AI..."
+            dashboard-factory generate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml --output generated/payment-journey.yaml --ai
+          else
+            echo "Generating dashboard specification via standard template generator..."
+            dashboard-factory generate --application examples/parcelplus/application.yaml --request examples/parcelplus/requests/payment-journey.yaml --output generated/payment-journey.yaml
+          fi
           dashboard-factory render --spec generated/payment-journey.yaml --output generated/payment-journey.tf
           cp terraform/provider.tf.example generated/provider.tf
       - uses: hashicorp/setup-terraform@v3
