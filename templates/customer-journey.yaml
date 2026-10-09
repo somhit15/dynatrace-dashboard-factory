@@ -1,0 +1,31 @@
+name: standard-customer-journey
+description: Organization standard for business journey and transactional funnel monitoring
+audience: operations
+category: journey
+layout:
+  columns: 3
+  tile_height: 3
+pattern:
+  - stage: entry
+    title: Order Ingestion & Creation
+    metric_type: counter
+    role: throughput
+  - stage: processing
+    title: Payment Authorizations & Success
+    metric_type: counter
+    role: conversion
+  - stage: failure
+    title: Transaction Failures & Rejections
+    metric_type: counter
+    role: errors
+  - stage: performance
+    title: End-to-End Latency
+    metric_type: histogram
+    role: latency
+  - stage: fulfillment
+    title: Dispatch & Delivery Completion
+    metric_type: counter
+    role: completion
+tags:
+  - pattern:customer-journey
+  - standard:enterprise-observability

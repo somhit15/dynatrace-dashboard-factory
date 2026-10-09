@@ -1,0 +1,20 @@
+name: standard-executive-overview
+description: High-level KPI and business conversion dashboard for leadership
+audience: executive
+category: business-kpi
+layout:
+  columns: 2
+  tile_height: 4
+pattern:
+  - role: primary-business-volume
+    title: Total Transaction Volume
+    metric_type: counter
+  - role: business-success-rate
+    title: Business Success / Delivery Rate
+    metric_type: counter
+  - role: system-latency
+    title: Core Service Latency
+    metric_type: histogram
+tags:
+  - pattern:executive-overview
+  - standard:business-observability

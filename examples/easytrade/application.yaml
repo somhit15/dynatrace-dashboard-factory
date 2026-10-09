@@ -1,0 +1,42 @@
+application:
+  name: easytrade
+  owner: trading-platform
+  environment: dev
+
+services:
+  - name: broker-service
+    technology: nodejs
+  - name: pricing-service
+    technology: dotnet
+  - name: engine
+    technology: java
+  - name: accountservice
+    technology: java
+  - name: credit-card-order-service
+    technology: nodejs
+  - name: loginservice
+    technology: nodejs
+
+metrics:
+  - name: easytrade.trades.executed
+    type: counter
+    description: Total stock trades successfully executed
+  - name: easytrade.trades.rejected
+    type: counter
+    description: Trades rejected due to margin or validation failure
+  - name: easytrade.trade.execution_time_ms
+    type: histogram
+    description: Time taken to match and execute trade
+  - name: easytrade.pricing.quote_requests
+    type: counter
+    description: Stock price quote requests received
+  - name: easytrade.accounts.logins
+    type: counter
+    description: User authentication events
+
+slos:
+  - name: trade-execution-success
+    target: 99.5
+  - name: trade-latency-p95
+    target: 95
+    threshold_seconds: 1.5

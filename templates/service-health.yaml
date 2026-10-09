@@ -1,0 +1,20 @@
+name: standard-service-health
+description: RED method service health standard (Rate, Errors, Duration)
+audience: engineering
+category: service-health
+layout:
+  columns: 3
+  tile_height: 3
+pattern:
+  - role: rate
+    title: Service Request Rate & Throughput
+    metric_type: counter
+  - role: errors
+    title: Service Error Rate & Exceptions
+    metric_type: counter
+  - role: duration
+    title: Service Response Time & Latency
+    metric_type: histogram
+tags:
+  - pattern:service-health
+  - standard:red-method

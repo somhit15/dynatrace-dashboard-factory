@@ -1,0 +1,13 @@
+name: easytrade-broker-performance
+description: Trade execution throughput, rejection rates, and matching engine latency for EasyTrade
+audience: operations
+services:
+  - broker-service
+  - engine
+metrics:
+  - easytrade.trades.executed
+  - easytrade.trades.rejected
+  - easytrade.trade.execution_time_ms
+tags:
+  - application:easytrade
+  - domain:brokerage
