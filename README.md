@@ -155,7 +155,7 @@ Create a Dynatrace API token with:
 - `ReadConfig`
 - `WriteConfig`
 
-In GitHub, create or open the `demo` environment under **Settings → Environments**.
+In GitHub, create or open the `dev` environment under **Settings → Environments**.
 Add these environment secrets to that environment:
 
 ```text
@@ -166,7 +166,7 @@ DYNATRACE_API_TOKEN=<api-token>
 Do not add `/api/v2/otlp` to `DYNATRACE_ENV_URL`; that endpoint is used by the
 ParcelPlus OpenTelemetry Collector, not by Terraform.
 
-The `demo` environment is intentionally used by the deployment workflow so
+The `dev` environment is intentionally used by the deployment workflow so
 that an approval rule can be enabled before any dashboard is changed.
 
 The token must have both `ReadConfig` and `WriteConfig`. The workflow performs
@@ -187,7 +187,7 @@ examples/parcelplus/requests/payment-journey.yaml
 The application manifest describes the services and business metrics that the
 factory is allowed to reference. The request selects the first dashboard to
 generate. A push to `main` runs validation, generates the specification,
-renders Terraform, and deploys the dashboard to the Demo environment.
+renders Terraform, and deploys the dashboard to the Dev environment.
 
 To onboard another application, copy `examples/parcelplus/` to a new folder,
 replace its service and metric contract, add one or more requests, and update
@@ -210,7 +210,7 @@ dashboard-factory render --spec generated/payment-journey.yaml \
 ```
 
 The deploy workflow can also be started manually with **Actions → Deploy
-dashboards to Dynatrace Demo → Run workflow**. If Terraform `plan` succeeds but
+dashboards to Dynatrace Dev → Run workflow**. If Terraform `plan` succeeds but
 `apply` fails, check the Dynatrace API token scopes and the generated dashboard
 payload first.
 
@@ -226,12 +226,14 @@ Pull request
   → terraform fmt and validate
   → terraform plan
   → review and merge
-  → apply to Demo environment
+  → apply to Dev environment
   → verify dashboard and data
-  → promote or revert
+  → promote to Tst or revert
 ```
 
-Use GitHub Environments for `demo`, `uat`, and `production`. Keep the Dynatrace token in environment secrets and require approval for production.
+Use GitHub Environments for `dev`, `tst`, and `prd`. Keep the Dynatrace token in environment secrets and require approval for prd.
+
+
 
 ## Design principles
 

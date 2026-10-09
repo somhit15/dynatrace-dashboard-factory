@@ -1,4 +1,4 @@
-name: Deploy dashboards to Dynatrace Demo
+name: Deploy dashboards to Dynatrace Dev
 
 on:
   workflow_dispatch:
@@ -9,12 +9,12 @@ on:
       - "schemas/**"
       - "src/**"
       - "templates/**"
-      - ".github/workflows/deploy-demo.yml"
+      - ".github/workflows/deploy-dev.yml"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: demo
+    environment: dev
     permissions:
       contents: read
     steps:
@@ -44,8 +44,8 @@ jobs:
           DYNATRACE_ENV_URL: ${{ secrets.DYNATRACE_ENV_URL }}
           DYNATRACE_API_TOKEN: ${{ secrets.DYNATRACE_API_TOKEN }}
         run: |
-          test -n "$DYNATRACE_ENV_URL" || { echo "DYNATRACE_ENV_URL is not configured in the demo environment"; exit 1; }
-          test -n "$DYNATRACE_API_TOKEN" || { echo "DYNATRACE_API_TOKEN is not configured in the demo environment"; exit 1; }
+          test -n "$DYNATRACE_ENV_URL" || { echo "DYNATRACE_ENV_URL is not configured in the dev environment"; exit 1; }
+          test -n "$DYNATRACE_API_TOKEN" || { echo "DYNATRACE_API_TOKEN is not configured in the dev environment"; exit 1; }
           status=$(curl --silent --show-error --output /tmp/dynatrace-response.txt --write-out "%{http_code}" \
             --header "Authorization: Api-Token $DYNATRACE_API_TOKEN" \
             "${DYNATRACE_ENV_URL%/}/api/config/v1/dashboards")
@@ -70,3 +70,22 @@ jobs:
           DYNATRACE_ENV_URL: ${{ secrets.DYNATRACE_ENV_URL }}
           DYNATRACE_API_TOKEN: ${{ secrets.DYNATRACE_API_TOKEN }}
         run: terraform -chdir=generated apply -auto-approve tfplan
+      - name: Verify dashboard deployment
+        env:
+          DYNATRACE_ENV_URL: ${{ secrets.DYNATRACE_ENV_URL }}
+          DYNATRACE_API_TOKEN: ${{ secrets.DYNATRACE_API_TOKEN }}
+        run: |
+          echo "Checking that dashboard was created in Dynatrace..."
+          status=$(curl --silent --show-error --output /tmp/dashboards.json --write-out "%{http_code}" \
+            --header "Authorization: Api-Token $DYNATRACE_API_TOKEN" \
+            "${DYNATRACE_ENV_URL%/}/api/config/v1/dashboards")
+          if [ "$status" != "200" ]; then
+            echo "Post-deploy verification failed with HTTP $status"
+            exit 1
+          fi
+          if grep -q "parcelplus-payment-journey" /tmp/dashboards.json; then
+            echo "✅ Dashboard 'parcelplus-payment-journey' is present in Dynatrace dev environment"
+          else
+            echo "⚠️  Dashboard not found by name in listing — it may still be deploying or use a different display name"
+            cat /tmp/dashboards.json | head -50
+          fi

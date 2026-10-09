@@ -1,7 +1,7 @@
 application:
   name: parcelplus
   owner: delivery-platform
-  environment: demo
+  environment: dev
 
 services:
   - name: api-gateway
