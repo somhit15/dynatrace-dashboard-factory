@@ -11,14 +11,13 @@ def _resource_name(value: str) -> str:
 
 
 def _dql_metric_query(metric: str, services: list[str]) -> str:
-    """Build a valid DQL timeseries query for a metric.
+    """Build canonical DQL timeseries query for a metric.
 
-    The DQL `timeseries` command does not support inline `filter:` with
-    matchesPhrase on entity names. Service-level filtering in Grail requires
-    entity IDs resolved at query time, not service name strings.
-    We emit a clean sum query; the tile title communicates the metric scope.
+    In Dynatrace Grail, the simplest and most robust syntax is:
+      timeseries sum(`metric.name`)
+    Dynatrace automatically determines the interval and aggregation buckets.
     """
-    return f"timeseries val = sum(`{metric}`), interval: auto"
+    return f"timeseries sum(`{metric}`)"
 
 
 def _new_dashboard_payload(spec: dict[str, Any]) -> dict[str, Any]:
